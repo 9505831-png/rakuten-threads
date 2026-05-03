@@ -275,9 +275,9 @@
 
 <script>
   const APP_ID     = '0a20b387-b2e2-42b3-83d4-276e265b0abf';
-  const AFF_ID     = '536bbf3d.7c674743.536bbf3e.d20abd20';
   const ACCESS_KEY = 'pk_S6uhk1yZKJh6F4h6IBnkhQ8kjUXU6VNFfTSO3QM65V9';
-  const API_BASE   = 'https://app.rakuten.co.jp/services/api/IchibaItem/Ranking/20170628';
+  const AFF_ID     = '536bbf3d.7c674743.536bbf3e.d20abd20';
+  const API_BASE   = 'https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20220601';
 
   function setLoading(loading) {
     const btn = document.getElementById('fetch-btn');
@@ -293,63 +293,27 @@
     document.getElementById('product-card').classList.remove('visible');
     document.getElementById('post-section').classList.remove('visible');
 
-    // 試行1: applicationId + Bearer トークン認証
-    try {
-      const params = new URLSearchParams({ affiliateId: AFF_ID, hits: 1, format: 'json', formatVersion: 2 });
-      const res = await fetch(`${API_BASE}?${params}`, {
-        headers: { 'Authorization': `Bearer ${ACCESS_KEY}` }
-      });
-      const data = await res.json();
-      if (!data.error) { setLoading(false); handleData(data); return; }
-      console.warn('試行1失敗:', data.error);
-    } catch (e) { console.warn('試行1 fetch失敗:', e.message); }
-
-    // 試行2: applicationId のみ（従来方式）
-    try {
-      const params = new URLSearchParams({ applicationId: APP_ID, affiliateId: AFF_ID, hits: 1, format: 'json', formatVersion: 2 });
-      const res = await fetch(`${API_BASE}?${params}`);
-      const data = await res.json();
-      if (!data.error) { setLoading(false); handleData(data); return; }
-      console.warn('試行2失敗:', data.error);
-    } catch (e) { console.warn('試行2 fetch失敗:', e.message); }
-
-    // 試行3: access key を applicationId として使用
-    try {
-      const params = new URLSearchParams({ applicationId: ACCESS_KEY, affiliateId: AFF_ID, hits: 1, format: 'json', formatVersion: 2 });
-      const res = await fetch(`${API_BASE}?${params}`);
-      const data = await res.json();
-      if (!data.error) { setLoading(false); handleData(data); return; }
-      console.warn('試行3失敗:', data.error);
-    } catch (e) { console.warn('試行3 fetch失敗:', e.message); }
-
-    // 試行4: JSONP（applicationId）
-    await new Promise((resolve) => {
-      const cbName = '_rb_' + Date.now();
-      const script = document.createElement('script');
-      let done = false;
-      const timer = setTimeout(() => {
-        if (done) return; done = true;
-        delete window[cbName]; if (script.parentNode) script.parentNode.removeChild(script);
-        setLoading(false); showError('すべての認証方式が失敗しました。楽天ウェブサービスのアプリ設定をご確認ください。');
-        resolve();
-      }, 8000);
-      window[cbName] = (data) => {
-        if (done) return; done = true; clearTimeout(timer);
-        delete window[cbName]; if (script.parentNode) script.parentNode.removeChild(script);
-        setLoading(false);
-        if (data.error) { showError(`APIエラー: ${data.error} - ${data.error_description || ''}`); }
-        else { handleData(data); }
-        resolve();
-      };
-      script.onerror = () => {
-        if (done) return; done = true; clearTimeout(timer);
-        delete window[cbName]; if (script.parentNode) script.parentNode.removeChild(script);
-        setLoading(false); showError('API接続に失敗しました。'); resolve();
-      };
-      const params = new URLSearchParams({ applicationId: APP_ID, affiliateId: AFF_ID, hits: 1, format: 'json', formatVersion: 2, callback: cbName });
-      script.src = `${API_BASE}?${params}`;
-      document.head.appendChild(script);
+    const params = new URLSearchParams({
+      applicationId: APP_ID,
+      accessKey:     ACCESS_KEY,
+      affiliateId:   AFF_ID,
+      hits:          1,
+      sort:          '-seller',
+      format:        'json',
+      formatVersion: 2,
     });
+
+    try {
+      const res = await fetch(`${API_BASE}?${params}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setLoading(false);
+      handleData(data);
+    } catch (e) {
+      setLoading(false);
+      showError(`接続エラー: ${e.message}`);
+      console.error(e);
+    }
   }
 
   function handleData(data) {
@@ -368,8 +332,10 @@
       return;
     }
 
-    // formatVersion=2 では Items[0] が直接アイテム、v1 では Items[0].Item
+    // formatVersion=2: Items[0] が直接アイテム、v1: Items[0].Item
     const item = data.Items[0].Item !== undefined ? data.Items[0].Item : data.Items[0];
+
+    // rankフィールドがない場合（Search APIは rank を返さない）は「1位」固定表示
     const imgUrl = item.mediumImageUrls && item.mediumImageUrls.length > 0
       ? item.mediumImageUrls[0].imageUrl
       : '';
