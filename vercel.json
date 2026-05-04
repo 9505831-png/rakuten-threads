@@ -1,4 +1,8 @@
 {
   "outputDirectory": ".",
-  "framework": null
+  "framework": null,
+  "rewrites": [
+    { "source": "/auth",     "destination": "/api/auth"     },
+    { "source": "/callback", "destination": "/api/callback" }
+  ]
 }
