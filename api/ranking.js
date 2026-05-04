@@ -1,33 +1,35 @@
 const APP_ID     = '0a20b387-b2e2-42b3-83d4-276e265b0abf';
 const ACCESS_KEY = 'pk_S6uhk1yZKJh6F4h6IBnkhQ8kjUXU6VNFfTSO3QM65V9';
 const AFF_ID     = '536bbf3d.7c674743.536bbf3e.d20abd20';
-const ENDPOINT   = 'https://app.rakuten.co.jp/services/api/IchibaItem/Ranking/20170628';
+const ENDPOINT   = 'https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20220601';
 
-const GENRE_MAP = {
-  food:        '100227',
-  beauty:      '216131',
-  electronics: '401213',
-  fashion:     '110671',
-  sports:      '101240',
-  book:        '200162',
-  baby:        '551177',
-  interior:    '215785',
+const KEYWORD_MAP = {
+  '':          '人気商品',
+  food:        '食品 人気',
+  beauty:      '美容 人気',
+  electronics: '家電 人気',
+  fashion:     'ファッション 人気',
+  sports:      'スポーツ 人気',
+  book:        '本 ベストセラー',
+  baby:        'ベビー 人気',
+  interior:    'インテリア 人気',
 };
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
 
-  const params = new URLSearchParams({
-    applicationId:  APP_ID,
-    accessKey:      ACCESS_KEY,
-    affiliateId:    AFF_ID,
-    hits:           1,
-    format:         'json',
-    formatVersion:  2,
-  });
+  const genre   = req.query.genre ?? '';
+  const keyword = KEYWORD_MAP[genre] ?? KEYWORD_MAP[''];
 
-  const genreId = GENRE_MAP[req.query.genre];
-  if (genreId) params.set('genreId', genreId);
+  const params = new URLSearchParams({
+    applicationId: APP_ID,
+    accessKey:     ACCESS_KEY,
+    affiliateId:   AFF_ID,
+    keyword,
+    hits:          1,
+    sort:          '-reviewCount',
+    format:        'json',
+  });
 
   try {
     const resp = await fetch(`${ENDPOINT}?${params}`, {
