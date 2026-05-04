@@ -1,10 +1,22 @@
 const APP_ID     = '0a20b387-b2e2-42b3-83d4-276e265b0abf';
 const ACCESS_KEY = 'pk_S6uhk1yZKJh6F4h6IBnkhQ8kjUXU6VNFfTSO3QM65V9';
 const AFF_ID     = '536bbf3d.7c674743.536bbf3e.d20abd20';
-const ENDPOINT   = 'https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20220601';
+const ENDPOINT   = 'https://openapi.rakuten.co.jp/services/api/IchibaItem/Search/20220601';
+
+async function getServerIp() {
+  try {
+    const r = await fetch('https://api.ipify.org?format=json');
+    const { ip } = await r.json();
+    return ip;
+  } catch {
+    return null;
+  }
+}
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
+
+  const serverIp = await getServerIp();
 
   const params = new URLSearchParams({
     applicationId:  APP_ID,
@@ -28,11 +40,11 @@ export default async function handler(req, res) {
     try { data = JSON.parse(text); } catch { data = { raw: text }; }
 
     if (response.ok && !data.error) {
-      return res.status(200).json(data);
+      return res.status(200).json({ ...data, _serverIp: serverIp });
     }
 
-    return res.status(response.status).json({ error: 'api_error', status: response.status, data });
+    return res.status(response.status).json({ error: 'api_error', status: response.status, serverIp, data });
   } catch (e) {
-    return res.status(500).json({ error: 'fetch_failed', message: e.message });
+    return res.status(500).json({ error: 'fetch_failed', message: e.message, serverIp });
   }
 }

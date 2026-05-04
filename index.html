@@ -228,6 +228,59 @@
       height: 18px;
       fill: white;
     }
+
+    /* IPアドレス表示 */
+    .ip-box {
+      background: #fffbeb;
+      border: 1.5px solid #fcd34d;
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 0.83rem;
+      color: #78350f;
+    }
+    .ip-box strong { display: block; font-size: 0.88rem; margin-bottom: 6px; color: #92400e; }
+    .ip-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .ip-value {
+      font-family: monospace;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #1e293b;
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 5px 12px;
+      flex: 1;
+    }
+    .ip-copy-btn {
+      padding: 6px 14px;
+      background: #f59e0b;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      white-space: nowrap;
+    }
+    .ip-copy-btn:hover { opacity: 0.85; }
+    .ip-reload-btn {
+      padding: 6px 10px;
+      background: #e2e8f0;
+      border: none;
+      border-radius: 8px;
+      color: #475569;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .ip-reload-btn:hover { opacity: 0.75; }
   </style>
 </head>
 <body>
@@ -238,6 +291,16 @@
 </header>
 
 <main>
+  <div class="ip-box">
+    <strong>🖥️ VercelサーバーのIPアドレス（楽天APIに登録が必要）</strong>
+    このIPアドレスを楽天デベロッパーアカウントのAPIアクセス許可リストに登録してください。
+    <div class="ip-row">
+      <span class="ip-value" id="ip-value">取得中...</span>
+      <button class="ip-copy-btn" id="ip-copy-btn" onclick="copyIp()">コピー</button>
+      <button class="ip-reload-btn" onclick="fetchIp()" title="再取得">↻</button>
+    </div>
+  </div>
+
   <button class="fetch-btn" id="fetch-btn" onclick="fetchRanking()">
     🏆 総合ランキング1位を取得する
   </button>
@@ -274,6 +337,28 @@
 </main>
 
 <script>
+  async function fetchIp() {
+    const el = document.getElementById('ip-value');
+    el.textContent = '取得中...';
+    try {
+      const res = await fetch('/api/ip');
+      const { ip } = await res.json();
+      el.textContent = ip || '取得失敗';
+    } catch {
+      el.textContent = '取得失敗';
+    }
+  }
+
+  function copyIp() {
+    const ip = document.getElementById('ip-value').textContent;
+    if (!ip || ip === '取得中...' || ip === '取得失敗') return;
+    const btn = document.getElementById('ip-copy-btn');
+    navigator.clipboard.writeText(ip).then(() => {
+      btn.textContent = '✅ コピー済';
+      setTimeout(() => { btn.textContent = 'コピー'; }, 2000);
+    });
+  }
+
   function setLoading(loading) {
     const btn = document.getElementById('fetch-btn');
     btn.disabled = loading;
@@ -401,6 +486,8 @@
     const url  = `https://www.threads.net/intent/post?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
   }
+
+  fetchIp();
 </script>
 </body>
 </html>
