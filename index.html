@@ -442,17 +442,18 @@
 
   function handleData(data) {
     if (data?.error) {
-      showError(`APIエラー: ${data.error}${data.data?.error_description ? ' / ' + data.data.error_description : ''}`);
-      console.error(data);
+      const msg = data.message || data.detail?.error_description || data.detail?.error || data.error;
+      showError(`APIエラー (${data.status ?? ''}): ${msg}`);
+      console.error('API error response:', data);
       return;
     }
     if (!data?.Items?.length) {
-      showError('商品データが取得できませんでした。');
-      console.error(data);
+      showError('商品データが取得できませんでした（検索結果0件）。');
+      console.error('Empty response:', data);
       return;
     }
 
-    // formatVersion=2 では Items[0] が直接オブジェクト
+    // formatVersion未指定(v1): Items[0].Item  /  v2: Items[0] が直接オブジェクト
     currentItem = data.Items[0].Item ?? data.Items[0];
     renderProduct(currentItem);
     renderPost(currentItem);
